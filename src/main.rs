@@ -9,7 +9,7 @@ fn main() {
     let anon = TwitchAnon::new()
         .set_username(username.as_str())
         .set_password(password.as_str())
-        .add_channel("BareDooDah")
+        .add_channel("BareCoolCowSaysMooMah")
         .add_channel("ToggleBit")
         .run();
 
@@ -21,7 +21,7 @@ fn main() {
 
                 match command[0] {
                     "!discord" => match t_msg.channel.as_str() {
-                        "baredoodah" => anon.send("#baredoodah", "https://discord.gg/h3UkuQU"),
+                        "barecoolcowsaysmoomah" => anon.send("#barecoolcowsaysmoomah", "https://discord.gg/h3UkuQU"),
                         "togglebit" => anon.send("#togglebit", "https://discord.gg/fZ4kFnS"),
                         _ => {}
                     },
