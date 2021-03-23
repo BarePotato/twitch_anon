@@ -44,9 +44,9 @@ pub struct Message {
 }
 
 #[derive(Debug)]
-pub struct TwitchAnon<'pornhub> {
-    username: &'pornhub str,
-    password: &'pornhub str,
+pub struct TwitchAnon<'anon> {
+    username: &'anon str,
+    password: &'anon str,
     channel: String,
     queue: Option<mpsc::Sender<Message>>,
     pub messages: mpsc::Receiver<Message>,
@@ -73,15 +73,15 @@ impl Life {
     }
 }
 
-impl<'pornhub> TwitchAnon<'pornhub> {
+impl<'anon> TwitchAnon<'anon> {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel();
         let (send_tx, send_rx) = mpsc::channel();
 
         TwitchAnon {
             username: "justinfan1979111",
-            password: "BareDoodahOnTwitch",
-            channel: "baredoodah,toggleBit".to_string(),
+            password: "BareCoolCowSawsMoomahOnTwitch",
+            channel: "barecoolcowsaysmoomah,toggleBit".to_string(),
             queue: Some(tx),
             messages: rx,
             send_tx,
@@ -89,18 +89,7 @@ impl<'pornhub> TwitchAnon<'pornhub> {
         }
     }
 
-    // todo: add some simple validation for user/pass/channel
-    pub fn set_username(mut self, username: &'pornhub str) -> Self {
-        self.username = username;
-        self
-    }
-
-    pub fn set_password(mut self, password: &'pornhub str) -> Self {
-        self.password = password;
-        self
-    }
-
-    pub fn add_channel(mut self, channel: &'pornhub str) -> Self {
+    pub fn add_channel(mut self, channel: &'anon str) -> Self {
         self.channel = match self.channel.len() {
             0 => channel.to_string().to_lowercase(),
             _ => format!("{},{}", self.channel, channel).to_lowercase(),
@@ -108,25 +97,11 @@ impl<'pornhub> TwitchAnon<'pornhub> {
         self
     }
 
-    pub fn send(&self, channel: &str, message: &str) {
-        let mut channel = channel.to_string();
-        if !channel.starts_with('#') {
-            channel = format!("#{}", channel);
-        }
-
-        let message = format!("PRIVMSG {} :{}", channel.to_lowercase(), message);
-
-        // fixme:: Handle this error maybe or not because this should be handled on receiver side
-        let _ = self.send_tx.send(message);
-    }
-
     pub fn run(mut self) -> Self {
         let mut anon_life = Life::new();
 
         let queue = self.queue.take().unwrap();
-        let sendy_boy = self.send_rx.take().unwrap();
 
-        // todo std::mem::take this
         let password = self.password.to_string();
         let username = self.username.to_string();
         let channels = self
@@ -137,6 +112,7 @@ impl<'pornhub> TwitchAnon<'pornhub> {
 
         let _handle = thread::spawn(move || {
             loop {
+                // yes? what should this do?
                 // fixme: this should
                 dbg!("Doing a reconnect.", &anon_life);
 
@@ -157,6 +133,7 @@ impl<'pornhub> TwitchAnon<'pornhub> {
                         .set_nonblocking(true)
                         .expect("Failed to make socket non-blocking!");
 
+                    // TODO: FIXME: use doodah! here to reduce duplication?
                     if write(&mut stream, &format!("PASS {}", password)) == Reconnect::Yes {
                         continue;
                     }
@@ -175,7 +152,7 @@ impl<'pornhub> TwitchAnon<'pornhub> {
 
                     anon_life = Life::new();
 
-                    match circle_jerk(&mut stream, &queue, &sendy_boy) {
+                    match circle_check(&mut stream, &queue ) {
                         Reconnect::No | Reconnect::Quit => break,
                         Reconnect::Yes => {}
                     }
@@ -187,28 +164,15 @@ impl<'pornhub> TwitchAnon<'pornhub> {
     }
 }
 
-// fn do_connect(life: &mut Life, stream: &mut TcpStream) {
-// }
-
-struct CircleJerk {
-    stream: TcpStream,
-    queue: mpsc::Sender<Message>,
-    sendy_boy: mpsc::Receiver<Message>,
-    heart: Heart,
-    buffer: String,
-}
-
-fn circle_jerk(
+fn circle_check(
     stream: &mut TcpStream,
     queue: &mpsc::Sender<Message>,
-    sendy_boy: &mpsc::Receiver<String>,
 ) -> Reconnect {
     loop {
         let heart = &mut Heart::new();
 
-        thrust_and_return!(writer(stream, sendy_boy, heart));
         thrust_and_return!(reader(stream, queue, heart));
-        thrust_and_return!(throbber(stream, heart));
+        thrust_and_return!(heartbeat(stream, heart));
 
         std::thread::yield_now();
     }
@@ -244,7 +208,7 @@ enum Reconnect {
     Quit,
 }
 
-fn throbber(mut stream: &mut TcpStream, heart: &mut Heart) -> Reconnect {
+fn heartbeat(mut stream: &mut TcpStream, heart: &mut Heart) -> Reconnect {
     // if we haven't sent or received in a normal time period we ping twitch
     // to make sure our socket is still alive and the connection is there
 
@@ -255,20 +219,6 @@ fn throbber(mut stream: &mut TcpStream, heart: &mut Heart) -> Reconnect {
         heart.set_tried(true);
     } else if heart.tried && heart.last.elapsed().as_secs() > (5 * 60) + 10 {
         return Reconnect::Yes;
-    }
-
-    Reconnect::No
-}
-
-fn writer(
-    mut stream: &mut TcpStream,
-    sendy_boy: &mpsc::Receiver<String>,
-    heart: &mut Heart,
-) -> Reconnect {
-    //todo:: find a reason to make this all more verbose
-    while let Ok(message) = sendy_boy.try_recv() {
-        doodah!(&mut stream, &message);
-        heart.reset();
     }
 
     Reconnect::No
